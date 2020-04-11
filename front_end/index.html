@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="js/plotly.min.js"></script>
+    <script src="js/real_time_plot_utils.js"></script>
+    <script src="js/io_utils.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <script src="https://use.fontawesome.com/cb9ee27e39.js"></script>
+
+    <title>Raspberry PI zero - Weather Station</title>
+  </head>
+  <body>
+    <div class="container-fluid">
+      <h1>Weather Station</h1>
+
+      <div class="container-fluid">
+        <h2>Real time data</h2>
+
+        <div id="tu-plot"></div>
+
+        <div class="container-fluid">
+          <span>
+            <h2>Load past data</h2>
+            Choose a date interval:
+            <div id="datarange" style="background: #fff; cursor: pointer; padding: 5px 10px; border: 1px solid #ccc; width: 100%">
+                <i class="fa fa-calendar"></i>&nbsp;
+                <span></span> <i class="fa fa-caret-down"></i>
+            </div>
+          </span>
+        </div>
+      </div>
+
+  </div>
+
+    <script type="text/javascript">
+
+      $(document).ready(function(){
+        // rtpUtils.init("tu-plot");
+        ioUtils.initDatePicker();
+
+        ioUtils.onSelect(function(dateS, dateE){
+
+          console.log("dateS: ",dateS)
+          console.log("dateE: ",dateE)
+
+          ioUtils.getData(dateS, dateE, function(data){
+
+              console.log("data: ", data);
+
+              rtpUtils.initWithData("tu-plot", data);
+
+          });
+        });
+      });
+    </script>
+
+
+  </body>
+</html>
