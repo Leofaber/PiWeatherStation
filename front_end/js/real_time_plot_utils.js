@@ -19,8 +19,8 @@
       }
     };
 
-    var tData = {x:[0], y:[0], type:'line', name: 'Temperature (C°)', color: 'orange'};
-    var hData = {x:[0], y:[0], type:'line', name: 'Umidity (g/m3)', color: 'blue'};
+    var tData = {x:[moment()], y:[0], type:'line', name: 'Temperature (C°)', color: 'orange'};
+    var hData = {x:[moment()], y:[0], type:'line', name: 'Umidity (g/m3)', color: 'blue'};
 
     _rtpUtils.init = function(plotName){
         Plotly.newPlot(plotName, [tData, hData], layout);
