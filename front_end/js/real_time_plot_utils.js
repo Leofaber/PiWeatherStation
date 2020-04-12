@@ -6,11 +6,31 @@
   function RTPUtils(){
     var _rtpUtils = {};
 
-    var layout = {
+    var t_layout = {
       showlegend: true,
       xaxis: {
         type: 'date',
         title: 'UTC date'
+      },
+      yaxis: {
+        title: 'Temperature (C°)',
+        range: [15,35]
+      },
+      legend: {
+        x: 1,
+        xanchor: 'right',
+        y: 1
+      }
+    };
+    var h_layout = {
+      showlegend: true,
+      xaxis: {
+        type: 'date',
+        title: 'UTC date'
+      },
+      yaxis: {
+        title: 'Humidity (%)',
+        range: [20,80]
       },
       legend: {
         x: 1,
@@ -19,21 +39,35 @@
       }
     };
 
-    var tData = {x:[moment()], y:[0], type:'line', name: 'Temperature (C°)', color: 'orange'};
-    var hData = {x:[moment()], y:[0], type:'line', name: 'Umidity (g/m3)', color: 'blue'};
+    var tData = {x:[moment()], y:[0], type:'line', name: 'Temp (C°)', line: {color: 'orange'}, error_y: {type: 'constant', color: 'orange', value: 0.5, thickness: 0.5, width: 2, opacity: 2} };
+
+    var hData = {x:[moment()], y:[0], type:'line', name: 'Hum (%)', line: {color: 'blue'}, error_y: {type: 'constant', color: 'blue', value: 2.5, thickness: 0.5, width: 2, opacity: 2} };
 
     _rtpUtils.init = function(plotName){
-        Plotly.newPlot(plotName, [tData, hData], layout);
+        if (plotName == "t-plot") {
+          Plotly.newPlot(plotName, [tData], t_layout);
+        }
+        if (plotName == "h-plot") {
+          Plotly.newPlot(plotName, [hData], h_layout);
+        }
     };
 
-    _rtpUtils.initWithData = function(plotName, data){
-        tData.x = data.data_time;
-        tData.y = data.data_t;
-
-        hData.x = data.data_time;
-        hData.y = data.data_h;
-        console.log(tData)
-        Plotly.newPlot(plotName, [tData, hData], layout);
+    _rtpUtils.initWithData = function(plotName, data_x, data_y){
+        if (plotName == "t-plot") {
+          tData.x = data_x.map(function(v){
+            return moment.unix(v).add(2, 'hours').toISOString();
+          });
+          tData.y = data_y
+          console.log("tData:",tData)
+          Plotly.newPlot(plotName, [tData], t_layout);
+        }  else {
+          hData.x = data_x.map(function(v){
+            return moment.unix(v).add(2, 'hours').toISOString();
+          });
+          hData.y = data_y
+          console.log("hData:",hData)
+          Plotly.newPlot(plotName, [hData], h_layout);
+        }
     };
 
     _rtpUtils.resetPlot = function(plotName){

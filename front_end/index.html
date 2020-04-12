@@ -18,13 +18,26 @@
     <title>Raspberry PI zero - Weather Station</title>
   </head>
   <body>
-    <div class="container-fluid">
-      <h1>Weather Station</h1>
-
+    <nav class="navbar navbar-inverse">
       <div class="container-fluid">
-        <h2>Real time data (todo)</h2>
+        <div class="navbar-header">
+          <a class="navbar-brand" href="#">Weather Station</a>
+        </div>
+        <ul class="nav navbar-nav">
+          <li class="active"><a href="#">Home</a></li>
+          <!--
+          <li><a href="#">Page 1</a></li>
+          <li><a href="#">Page 2</a></li>
+          <li><a href="#">Page 3</a></li>
+          -->
+        </ul>
+      </div>
+    </nav>
+    <div class="container-fluid">
+      <div class="container-fluid">
 
-        <div id="tu-plot"></div>
+        <div id="t-plot"></div>
+        <div id="h-plot"></div>
 
         <div class="container-fluid">
           <span>
@@ -37,13 +50,17 @@
           </span>
         </div>
       </div>
+  </div>
+
+  <div style="margin-top: 100pt">
 
   </div>
 
     <script type="text/javascript">
 
       $(document).ready(function(){
-        rtpUtils.init("tu-plot");
+        rtpUtils.init("t-plot");
+        rtpUtils.init("h-plot");
         ioUtils.initDatePicker();
 
         ioUtils.onSelect(function(dateS, dateE){
@@ -55,7 +72,8 @@
 
               console.log("data: ", data);
 
-              rtpUtils.initWithData("tu-plot", data);
+              rtpUtils.initWithData("t-plot", data.data_time, data.data_t);
+              rtpUtils.initWithData("h-plot", data.data_time, data.data_h);
 
           });
         });

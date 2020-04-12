@@ -9,9 +9,10 @@ import Adafruit_DHT
 
 class SensorIO(ABC):
 
-    def __init__(self, read_out_time, aggregation_time):
+    def __init__(self, read_out_time, aggregation_time, debug):
         self.read_out_time = read_out_time
         self.aggregation_time = aggregation_time
+        self.debug = debug
 
     @abstractmethod
     def read(self):
@@ -23,11 +24,15 @@ class SensorIO(ABC):
 
 class DHT22(SensorIO):
 
-    def __init__(self, aggregation_time):
-        super().__init__(2.5,  aggregation_time)
+    def __init__(self, aggregation_time, debug):
+        super().__init__(2.5,  aggregation_time, debug)
 
     def aggregate(self, temp, hum):
-        return round(temp.mean(), 1), round(hum.mean(), 1), time()
+        now = datetime.now()
+        t, h, ts = round(temp.mean(), 1), round(hum.mean(), 1), now.timestamp()
+        if self.debug == 1:
+            print(f"{t} {h} {ts} -> {now}")
+        return t, h, ts
 
 
     def read(self):
@@ -49,7 +54,9 @@ class DHT22(SensorIO):
 
             if humidity is not None and temperature is not None:
 
-                # print("Temp={0:0.1f}*C Humidity={1:0.1f}%".format(temperature, humidity))
+                if self.debug == 2:
+                    print("{0:0.1f}*C {1:0.1f}%".format(temperature, humidity))
+
                 temp = np.append(temp, temperature)
                 hum = np.append(hum, humidity)
 
@@ -96,13 +103,14 @@ insert_counter_hum = 0
 
 if __name__ == "__main__":
 
+
     print(f"[sensor_capture] [{datetime.today()}] Starting!")
 
     sensor = Adafruit_DHT.DHT22
 
     pin = 12 # GPIO12
 
-    dht22 = DHT22(aggregation_time = 60)
+    dht22 = DHT22(aggregation_time = 60, debug=1)
 
     rc = RedisClient()
 

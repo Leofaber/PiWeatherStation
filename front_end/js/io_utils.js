@@ -32,8 +32,8 @@
 
     _ioUtils.onSelect = function(callback){
       $('#datarange').on('apply.daterangepicker', function(ev, picker) {
-        dateE = picker.startDate.toISOString();
-        dateS = picker.endDate.toISOString();
+        dateE = picker.startDate.unix();
+        dateS = picker.endDate.unix();
         callback(dateS, dateE)
       });
     };
