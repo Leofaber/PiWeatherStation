@@ -18,7 +18,7 @@
     <title>Raspberry PI zero - Weather Station</title>
   </head>
   <body>
-    <nav class="navbar navbar-inverse">
+    <nav class="navbar navbar-inverse" id="top-nav">
       <div class="container-fluid">
         <div class="navbar-header">
           <a class="navbar-brand" href="#">Weather Station</a>
@@ -33,7 +33,15 @@
         </ul>
       </div>
     </nav>
+
     <div class="container-fluid">
+
+      <div class="container" id="error-msg-div">
+        <div class="alert alert-danger">
+          <strong>Error!</strong> <span id="error-mgs"></span>
+        </div>
+      </div>
+
       <div class="container-fluid">
 
         <div id="t-plot"></div>
@@ -59,21 +67,29 @@
     <script type="text/javascript">
 
       $(document).ready(function(){
+        $("#error-msg-div").hide();
+
         rtpUtils.init("t-plot");
         rtpUtils.init("h-plot");
         ioUtils.initDatePicker();
 
         ioUtils.onSelect(function(dateS, dateE){
 
-          console.log("dateS: ",dateS)
-          console.log("dateE: ",dateE)
+          $([document.documentElement, document.body]).animate({
+              scrollTop: $("#top-nav").offset().top
+          }, 1000);
 
           ioUtils.getData(dateS, dateE, function(data){
 
-              console.log("data: ", data);
+              console.log("data from server: ", data);
 
               rtpUtils.initWithData("t-plot", data.data_time, data.data_t);
               rtpUtils.initWithData("h-plot", data.data_time, data.data_h);
+
+          }, function(errorThrown){
+
+              $("#error-msg-div").show();
+              $("#error-mgs").text(errorThrown);
 
           });
         });
