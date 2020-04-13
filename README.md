@@ -4,6 +4,8 @@
 
 Turn on the rasperry pi :)
 
+The software will start automagically (start up commands in /etc/rc.local)
+
 Go to: http://192.168.1.162:5000
 
 
