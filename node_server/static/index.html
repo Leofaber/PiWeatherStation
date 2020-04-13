@@ -10,6 +10,8 @@
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
     <script src="https://use.fontawesome.com/cb9ee27e39.js"></script>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.slim.js"></script>
+
     <script src="js/plotly.min.js"></script>
 
     <script src="js/real_time_plot_utils.js"></script>
@@ -35,6 +37,12 @@
     </nav>
 
     <div class="container-fluid">
+
+      <div>
+          Connection status: <strong><span id="connection-status">not connected</span></strong>
+          Streaming status: <strong><span id="streaming-status">deactivated</span></strong>
+      </div>
+
 
       <div class="container" id="error-msg-div">
         <div class="alert alert-danger">
@@ -66,34 +74,34 @@
 
     <script type="text/javascript">
 
+
+    $("#error-msg-div").hide();
+
       $(document).ready(function(){
-        $("#error-msg-div").hide();
 
         rtpUtils.init("t-plot");
         rtpUtils.init("h-plot");
+        
+        ioUtils.activate_data_stream();
+
         ioUtils.initDatePicker();
 
+        // when the user select a calendar range
         ioUtils.onSelect(function(dateS, dateE){
+
+          $("#error-msg-div").hide();
+
+          // ioUtils.deactivate_data_stream();
 
           $([document.documentElement, document.body]).animate({
               scrollTop: $("#top-nav").offset().top
           }, 1000);
 
-          ioUtils.getData(dateS, dateE, function(data){
+          ioUtils.getData(dateS, dateE);
 
-              console.log("data from server: ", data);
-
-              rtpUtils.initWithData("t-plot", data.data_time, data.data_t);
-              rtpUtils.initWithData("h-plot", data.data_time, data.data_h);
-
-          }, function(errorThrown){
-
-              $("#error-msg-div").show();
-              $("#error-mgs").text(errorThrown);
-
-          });
         });
       });
+
     </script>
 
 

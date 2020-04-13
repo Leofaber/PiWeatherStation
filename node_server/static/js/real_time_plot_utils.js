@@ -43,15 +43,23 @@
 
     var hData = {x:[moment()], y:[0], type:'line', name: 'Hum (%)', line: {color: 'blue'}, error_y: {type: 'constant', color: 'blue', value: 2.5, thickness: 0.5, width: 2, opacity: 2} };
 
+    var maxNumberOfPointToKeep = 34560 // 86400 / 2.5
+
     _rtpUtils.init = function(plotName){
+
         if (plotName == "t-plot") {
+          tData.x = [moment()];
+          tData.y = [0];
           Plotly.newPlot(plotName, [tData], t_layout);
         }
         if (plotName == "h-plot") {
+          hData.x = [moment()];
+          hData.y = [0];
           Plotly.newPlot(plotName, [hData], h_layout);
         }
     };
 
+    /*
     _rtpUtils.initWithData = function(plotName, data_x, data_y){
         if (plotName == "t-plot") {
           tData.x = data_x.map(function(v){
@@ -69,26 +77,18 @@
           Plotly.newPlot(plotName, [hData], h_layout);
         }
     };
+    */
 
-    _rtpUtils.resetPlot = function(plotName){
-        Plotly.deleteTraces(plotID, 0);
-        Plotly.deleteTraces(plotID, 1);
-    };
+    _rtpUtils.add_data = function(plotName, data_x, data_y){
 
+      data_x = data_x.map(function(v){
+        return moment.unix(v).add(2, 'hours').toISOString();
+      });
 
-    _rtpUtils.goRealTime = function(plotName){
-        setInterval(function() {
-          Plotly.extendTraces(plotName, { y: [[getData()]] }, [0])
-          Plotly.extendTraces(plotName, { y: [[getData()]] }, [1])
-        }, 1000);
+      Plotly.extendTraces(plotName, { x: [data_x], y: [data_y] }, [0], maxNumberOfPointToKeep)
     }
 
-    _rtpUtils.goRealTime = function(plotName){
-        setInterval(function() {
-          Plotly.extendTraces(plotName, { y: [[getData()]] }, [0])
-          Plotly.extendTraces(plotName, { y: [[getData()]] }, [1])
-        }, 1000);
-    }
+
 
     return _rtpUtils;
   }

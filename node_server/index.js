@@ -1,79 +1,40 @@
 var express = require('express');
-var moment = require('moment');
-const redis = require("redis");
-/*
-var io = require('socket.io');
-io.on('connection', function(socket){
-  console.log('a user connected');
-  socket.on('disconnect', function(){
-    console.log('user disconnected');
-  });
-});
-*/
 var app = express();
 app.use(express.json()) // for parsing application/json
 app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
-
-//setting middleware
 app.use(express.static(__dirname + '/static')); //Serves resources from public folder
 
-const client = redis.createClient();
+var http = require('http').createServer(app);
+
+require('./routes.js')(app);
+const redis_utils = require('./redis_utils.js');
+const io = require("socket.io")(http)
+
 
 var port = 5000;
-app.listen(port, () =>
-  console.log(`Example app listening on port ${port}!`),
-);
 
-app.get("/", function(req, res){
-  res.sendFile(__dirname + '/static/index.html');
-});
+http.listen(port, function(){
 
-app.post('/piws/get_data', function(req, res) {
-  console.log(req.body.dateS);
-  console.log(req.body.dateE);
+  console.log(`App listening on port ${port}!`);
 
-  dateS = parseFloat(req.body.dateS)
-  dateE = parseFloat(req.body.dateE)
+  io.on('connection', function(socket){
 
-  data = {
-    error : false,
-    error_msg : null,
-    data_t : [],
-    data_h : [],
-    data_time : []
-  }
+    console.log('PiWeatherStation app connected');
 
-  client.zrangebyscore(["temperature", dateS, dateE], function(rerr, rres){
-    console.log("zrangebyscore temperature",dateS,dateE)
-    if(rerr) {
-      data.error = true;
-      data.error_msg = rerr;
-    }
-    else {
-       console.log(rres.length,"results")
-       data.data_t = rres.map(function(e){
-         return parseFloat(e.split(":")[0])
-       });
-       data.data_time = rres.map(function(e){
-         return parseFloat(e.split(":")[1])
-       });
-    }
-    client.zrangebyscore(["humidity", dateS, dateE], function(rerr, rres){
-      console.log("zrangebyscore humidity",dateS,dateE)
-      if(rerr) {
-        data.error = true;
-        data.error_msg = rerr;
-      }
-      else {
-         console.log(rres.length,"results")
-         data.data_h = rres.map(function(e){
-           return parseFloat(e.split(":")[0])
-         });
-         data.data_time = rres.map(function(e){
-           return parseFloat(e.split(":")[1])
-         });
-      }
-      res.send(data);
+    socket.emit("connection_status", {"connected": true});
+
+    socket.on('disconnect', function(){
+      console.log('PiWeatherStation app disconnected');
+
+      redis_utils.unsubscribe_to_data_stream("data-stream");
+
+    });
+
+
+    redis_utils.subscribe_to_data_stream("data-stream", function(channel, message){
+
+      socket.emit("data-stream", message);
+
     });
   });
 });

@@ -3,6 +3,7 @@ from time import sleep, time
 from datetime import datetime, timedelta
 from abc import ABC, abstractmethod
 from threading import Timer
+import json
 
 import redis
 import Adafruit_DHT
@@ -26,46 +27,49 @@ class DHT22(SensorIO):
 
     def __init__(self, aggregation_time, debug):
         super().__init__(2.5,  aggregation_time, debug)
+        self.temp = np.array([])
+        self.hum = np.array([])
 
-    def aggregate(self, temp, hum):
+    def aggregate(self):
         now = datetime.now()
-        t, h, ts = round(temp.mean(), 1), round(hum.mean(), 1), now.timestamp()
+        t, h, ts = round(self.temp.mean(), 1), round(self.hum.mean(), 1), now.timestamp()
+        self.temp = np.array([])
+        self.hum = np.array([])
         if self.debug == 1:
             print(f"{t} {h} {ts} -> {now}")
         return t, h, ts
 
 
-    def read(self):
+    def read(self, aggregate = False):
 
-        temp = np.array([])
-        hum = np.array([])
-        time_s = time()
-        elapsed = 0
+        sleep(self.read_out_time)
 
-        while True:
+        humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
 
-            sleep(self.read_out_time)
+        if humidity is not None and temperature is not None:
 
-            if elapsed >= self.aggregation_time:
+            if self.debug == 2:
+                print("[DHT22] Read out: {0:0.1f}*C {1:0.1f}%".format(temperature, humidity))
 
-                return self.aggregate(temp, hum)
+            self.temp = np.append(self.temp, temperature)
+            self.hum  = np.append(self.hum, humidity)
 
-            humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
 
-            if humidity is not None and temperature is not None:
+        if aggregate:
 
-                if self.debug == 2:
-                    print("{0:0.1f}*C {1:0.1f}%".format(temperature, humidity))
+            return self.aggregate()
 
-                temp = np.append(temp, temperature)
-                hum = np.append(hum, humidity)
+        elif humidity is not None and temperature is not None:
 
-            else:
+            return [temperature], [humidity], [datetime.now().timestamp()]
 
-                print(f"[DHT22] [{datetime.today()}] Failed to get reading. Try again!")
+        else:
 
-            elapsed = time() - time_s
-            # print("elapsed: ",elapsed)
+            print(f"[DHT22] [{datetime.today()}] Failed to get reading. Try again!")
+
+            return None, None, datetime.now().timestamp()
+
+
 
 
 class RedisClient:
@@ -73,6 +77,10 @@ class RedisClient:
     def __init__(self):
 
         self.r = redis.Redis(host='localhost', port=6379, db=0)
+
+    def publish(self, channel, msg):
+
+        self.r.publish(channel, json.dumps(msg))
 
     def save_value_zset(self, key, value, timestamp):
 
@@ -87,15 +95,16 @@ class RedisClient:
         return self.r.zadd(key, mapping, nx=True)
 
 
+"""
 def get_countdown():
     x = datetime.today()
     y = x + timedelta(hours=6)
     delta_t = y-x
     return delta_t.total_seconds()
-
-
 def output_diagnostic_info():
     print(f"[sensor_capture] [{datetime.today()}] I'm alive! temp values: {insert_counter_temp}  hum values: {insert_counter_hum}")
+"""
+
 
 # global variables
 insert_counter_temp = 0
@@ -103,42 +112,69 @@ insert_counter_hum = 0
 
 if __name__ == "__main__":
 
-
     print(f"[sensor_capture] [{datetime.today()}] Starting!")
 
     sensor = Adafruit_DHT.DHT22
 
     pin = 12 # GPIO12
 
-    dht22 = DHT22(aggregation_time = 60, debug=1)
+    debug = 0
+
+    dht22 = DHT22(aggregation_time = 60, debug=debug)
 
     rc = RedisClient()
 
-    output_diagnostic_info()
+    #output_diagnostic_info()
 
-    elapsed = 0
-    time_s = time()
-    output_diagnostic_seconds = get_countdown()
+    #elapsed = 0
+    #time_s = time()
+    #output_diagnostic_seconds = get_countdown()
+
+    start_t = time()
+    elapsed_time_for_aggregation = 0
 
     try:
 
         while True:
 
-            if elapsed >= output_diagnostic_seconds:
+            if debug == 1:
+                print("\n[sensor_capture] New iteration..")
 
-                output_diagnostic_info()
+            #if elapsed >= output_diagnostic_seconds:
 
+                #output_diagnostic_info()
 
-            temp, hum, timeutc = dht22.read()
+            if debug == 1:
+                print("[sensor_capture] Polling sensor for 60 seconds..")
 
-            if rc.save_value_zset("temperature", temp, timeutc) == 1:
-                insert_counter_temp += 1
+            if elapsed_time_for_aggregation >= dht22.aggregation_time:
 
-            if rc.save_value_zset("humidity", hum, timeutc) == 1:
-                insert_counter_hum += 1
+                temp, hum, timeutc = dht22.read(aggregate=True)
 
-            elapsed = time() - time_s
+                if rc.save_value_zset("temperature", temp, timeutc) == 1:
+                    insert_counter_temp += 1
+
+                if rc.save_value_zset("humidity", hum, timeutc) == 1:
+                    insert_counter_hum += 1
+
+                start_t = time()
+                elapsed_time_for_aggregation = 0
+
+            else:
+
+                temp, hum, timeutc = dht22.read(aggregate=False)
+
+                data_msg = {
+                    "data_time" : timeutc,
+                    "data_t" : temp,
+                    "data_h" : hum
+                }
+
+                rc.publish("data-stream", data_msg)
+
+                elapsed_time_for_aggregation = time() - start_t
+
 
     except KeyboardInterrupt:
 
-        print("Script end!")
+        print(f"Script end -> {datetime.today()}")
