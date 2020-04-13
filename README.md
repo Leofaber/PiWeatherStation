@@ -1,16 +1,10 @@
 # PiWeatherStation
 
-## Start the software
-
-bash install.sh
- 
-Go to: http://192.168.1.162/
-
-## Usefull Redis commands
+## Start the softwares
 
 ```bash
-ZADD key [NX|XX] [CH] [INCR] score member [score member ...]
-ZCARD key
-ZRANGE key start stop [WITHSCORES]
-ZRANGEBYSCORE key min max [WITHSCORES] [LIMIT offset count]
+nohup node /home/pi/PiWeatherStation/node_server/index.js > pi_weather_station.log &
+nohup python -u /home/pi/PiWeatherStation/sensor_io/sensor_capture.py > sensor_capture.log &
 ```
+
+Go to: http://192.168.1.162:5000
