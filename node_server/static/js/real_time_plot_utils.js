@@ -20,7 +20,25 @@
         x: 1,
         xanchor: 'right',
         y: 1
-      }
+      },
+      shapes: [
+        // 1st highlight during Feb 4 - Feb 6
+        {
+            type: 'rect',
+            // x-reference is assigned to the x-values
+            xref: 'paper',
+            // y-reference is assigned to the plot paper [0,1]
+            yref: 'y',
+            x0: 0,
+            x1: 1,
+            y0: 18,
+            y1: 24,
+            fillcolor: '#c2f0c2',
+            opacity: 0.3,
+            line: {
+                width: 0
+            }
+        }]
     };
     var h_layout = {
       showlegend: true,
@@ -36,12 +54,30 @@
         x: 1,
         xanchor: 'right',
         y: 1
-      }
+      },
+      shapes: [
+        // 1st highlight during Feb 4 - Feb 6
+        {
+            type: 'rect',
+            // x-reference is assigned to the x-values
+            xref: 'paper',
+            // y-reference is assigned to the plot paper [0,1]
+            yref: 'y',
+            x0: 0,
+            x1: 1,
+            y0: 45,
+            y1: 55,
+            fillcolor: '#c2f0c2',
+            opacity: 0.3,
+            line: {
+                width: 0
+            }
+        }]
     };
 
-    var tData = {x:[moment()], y:[0], type:'line', name: 'Temp (C°)', line: {color: 'orange'}, error_y: {type: 'constant', color: 'orange', value: 0.5, thickness: 0.5, width: 2, opacity: 2} };
+    var tData = {x:[moment()], y:[0], type:'line', name: 'Temp (C°)', line: {color: '#ff9933'}, error_y: {type: 'constant', color: '#ffcc99', value: 0.5, thickness: 0.5, width: 1, opacity: 2} };
 
-    var hData = {x:[moment()], y:[0], type:'line', name: 'Hum (%)', line: {color: 'blue'}, error_y: {type: 'constant', color: 'blue', value: 2.5, thickness: 0.5, width: 2, opacity: 2} };
+    var hData = {x:[moment()], y:[0], type:'line', name: 'Hum (%)', line: {color: '#00ccff'}, error_y: {type: 'constant', color: '#99ebff', value: 2.5, thickness: 0.5, width: 1, opacity: 2} };
 
     var maxNumberOfPointToKeep = 34560 // 86400 / 2.5
 
