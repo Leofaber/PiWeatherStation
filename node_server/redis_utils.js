@@ -6,7 +6,7 @@ subscribe_to_data_stream = function(channel, callback) {
   redis_client_pubsub = redis.createClient();
   console.log("Subscribed to channel: " + channel);
   redis_client_pubsub.on("message", function (channel, message) {
-    console.log("Message: " + message + " on channel: " + channel + " is arrived!");
+    // console.log("Message: " + message + " on channel: " + channel + " is arrived!");
     callback(channel, message);
   });
   redis_client_pubsub.subscribe(channel);
