@@ -14,8 +14,6 @@ subscribe_to_data_stream = function(channel, callback) {
 
 unsubscribe_to_data_stream = function(channel) {
   redis_client_pubsub.unsubscribe(channel);
-  redis_client_pubsub.quit();
-  redis_client_pubsub = null;
   console.log("Unsubscribed to channel: " + channel);
 }
 
