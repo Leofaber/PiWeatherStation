@@ -1,0 +1,9 @@
+# Mail sender --------------------------------------
+sender_address: ""
+sender_pass: ""
+
+# Sensor ------------------------------------------
+sensor_pin: -1
+read_out_time: -1
+aggregation_time: -1
+debug: -1

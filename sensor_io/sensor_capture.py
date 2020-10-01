@@ -1,180 +1,55 @@
-import numpy as np
-from time import sleep, time
-from datetime import datetime, timedelta
-from abc import ABC, abstractmethod
-from threading import Timer
-import json
+import yaml
+from pathlib import Path
+from datetime import datetime
 
-import redis
-import Adafruit_DHT
+from sensors import DHT22
+from redis_client import RedisClient
+from mail_sender import GoogleMailSender
+from utils import send_alive_message, Hourglass, ThresholdCheck
 
-class SensorIO(ABC):
-
-    def __init__(self, read_out_time, aggregation_time, debug):
-        self.read_out_time = read_out_time
-        self.aggregation_time = aggregation_time
-        self.debug = debug
-
-    @abstractmethod
-    def read(self):
-        pass
-
-    @abstractmethod
-    def aggregate(self):
-        pass
-
-class DHT22(SensorIO):
-
-    def __init__(self, aggregation_time, debug):
-        super().__init__(2.5,  aggregation_time, debug)
-        self.temp = np.array([])
-        self.hum = np.array([])
-
-    def aggregate(self):
-        now = datetime.now()
-        t, h, ts = round(self.temp.mean(), 1), round(self.hum.mean(), 1), now.timestamp()
-        self.temp = np.array([])
-        self.hum = np.array([])
-        if self.debug == 1:
-            print(f"{t} {h} {ts} -> {now}")
-        return t, h, ts
-
-
-    def read(self, aggregate = False):
-
-        sleep(self.read_out_time)
-
-        humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
-
-        if humidity is not None and temperature is not None:
-
-            if self.debug == 2:
-                print("[DHT22] Read out: {0:0.1f}*C {1:0.1f}%".format(temperature, humidity))
-
-            self.temp = np.append(self.temp, temperature)
-            self.hum  = np.append(self.hum, humidity)
-
-
-        if aggregate:
-
-            return self.aggregate()
-
-        elif humidity is not None and temperature is not None:
-
-            return [temperature], [humidity], [datetime.now().timestamp()]
-
-        else:
-
-            print(f"[DHT22] [{datetime.today()}] Failed to get reading. Try again!")
-
-            return None, None, datetime.now().timestamp()
-
-
-
-
-class RedisClient:
-
-    def __init__(self):
-
-        self.r = redis.Redis(host='localhost', port=6379, db=0)
-
-    def publish(self, channel, msg):
-
-        self.r.publish(channel, json.dumps(msg))
-
-    def save_value_zset(self, key, value, timestamp):
-
-        elem_key = str(value)+":"+str(timestamp)
-
-        mapping = {
-            elem_key : float(timestamp)
-        }
-
-        # print(f"[RedisClient] Saving {mapping} in {key} zset")
-
-        return self.r.zadd(key, mapping, nx=True)
-
-
-"""
-def get_countdown():
-    x = datetime.today()
-    y = x + timedelta(hours=6)
-    delta_t = y-x
-    return delta_t.total_seconds()
-def output_diagnostic_info():
-    print(f"[sensor_capture] [{datetime.today()}] I'm alive! temp values: {insert_counter_temp}  hum values: {insert_counter_hum}")
-"""
-
-
-# global variables
-insert_counter_temp = 0
-insert_counter_hum = 0
 
 if __name__ == "__main__":
 
     print(f"[sensor_capture] [{datetime.today()}] Starting!")
 
-    sensor = Adafruit_DHT.DHT22
+    config_file = Path(__file__).parent.absolute().joinpath("configuration/conf.yml")
+    with open(config_file, 'r') as yamlfile:
+        config = yaml.safe_load(yamlfile)
 
-    pin = 12 # GPIO12
+    debug = config["debug"]
+    sensor_pin = config["sensor_pin"]
+    aggregation_time = config["aggregation_time"]
+    im_alive_countdown_sec = config["im_alive_countdown_sec"]
 
-    debug = 0
-
-    dht22 = DHT22(aggregation_time = 60, debug=debug)
-
+    dht22 = DHT22(sensor_pin = sensor_pin, debug = debug)
     rc = RedisClient()
+    gms = GoogleMailSender()
 
-    #output_diagnostic_info()
+    aggregation_hourglass = Hourglass(aggregation_time)
+    alive_hourglass = Hourglass(im_alive_countdown_sec)
 
-    #elapsed = 0
-    #time_s = time()
-    #output_diagnostic_seconds = get_countdown()
+    opt_temp_tc = ThresholdCheck(config["lb_opt_temp"], config["ub_opt_temp"])
+    crit_temp_tc = ThresholdCheck(config["lb_crit_temp"], config["ub_crit_temp"])
 
-    start_t = time()
-    elapsed_time_for_aggregation = 0
+    opt_hum_tc = ThresholdCheck(config["lb_opt_hum"], config["ub_opt_hum"])
+    crit_hum_tc = ThresholdCheck(config["lb_crit_hum"], config["ub_crit_hum"])
 
-    try:
+    disk_space_tc = ThresholdCheck(config["disk_space_gb"], 100000)
 
-        while True:
+    while True:
 
-            if debug == 1:
-                print("\n[sensor_capture] New iteration..")
+        if alive_hourglass.is_elapsed():
+            send_alive_message(gms)
+            alive_hourglass.restart()
 
-            #if elapsed >= output_diagnostic_seconds:
+        temp, hum, timeutc = dht22.read()
 
-                #output_diagnostic_info()
+        rc.publish("data-stream", {"data_time" : timeutc, "data_t" : temp, "data_h" : hum})
 
-            if debug == 1:
-                print("[sensor_capture] Polling sensor for 60 seconds..")
+        if aggregation_hourglass.is_elapsed():
+            temp, hum, timeutc = dht22.get_aggregated_data()
+            rc.save_value_zset("temperature", temp, timeutc)
+            rc.save_value_zset("humidity", hum, timeutc)
+            aggregation_hourglass.restart()
 
-            if elapsed_time_for_aggregation >= dht22.aggregation_time:
-
-                temp, hum, timeutc = dht22.read(aggregate=True)
-
-                if rc.save_value_zset("temperature", temp, timeutc) == 1:
-                    insert_counter_temp += 1
-
-                if rc.save_value_zset("humidity", hum, timeutc) == 1:
-                    insert_counter_hum += 1
-
-                start_t = time()
-                elapsed_time_for_aggregation = 0
-
-            else:
-
-                temp, hum, timeutc = dht22.read(aggregate=False)
-
-                data_msg = {
-                    "data_time" : timeutc,
-                    "data_t" : temp,
-                    "data_h" : hum
-                }
-
-                rc.publish("data-stream", data_msg)
-
-                elapsed_time_for_aggregation = time() - start_t
-
-
-    except KeyboardInterrupt:
-
-        print(f"Script end -> {datetime.today()}")
+    print(f"[sensor_capture] [{datetime.today()}] Ending!")
